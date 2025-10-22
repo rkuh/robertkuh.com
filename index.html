@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Robert Kuh - Sales Consulting Expert. 25+ years of experience helping businesses optimize sales processes, build high-performing teams, and accelerate revenue growth." />
+    <meta name="keywords" content="sales consulting, sales strategy, revenue growth, sales process optimization, sales leadership, business development" />
+    <title>Robert Kuh - Sales Consulting Expert | Revenue Growth Specialist</title>
+    <script type="module" crossorigin src="/assets/index-DUTXJzlB.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-GkI646vd.css">
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script>
+    (function () {
+      const log = (...args) => { try { console.log('[Consultation Form]', ...args); } catch(_) {} };
+
+      // Find the consultation form on the page
+      function findConsultationForm() {
+        const allForms = Array.from(document.querySelectorAll('form'));
+        if (!allForms.length) return null;
+        for (const form of allForms) {
+          const container = form.closest('section, div, main, article') || document.body;
+          const text = (container.textContent || '').toLowerCase();
+          if (text.includes('schedule your consultation')) return form;
+        }
+        if (allForms.length === 1) return allForms[0];
+        return null;
+      }
+
+      // Wait up to 8s for the form to appear
+      function waitForForm(maxMs = 8000) {
+        return new Promise((resolve, reject) => {
+          const started = Date.now();
+          const tick = () => {
+            const form = findConsultationForm();
+            if (form && form.querySelector('button[type="submit"],[type="submit"]')) return resolve(form);
+            if (Date.now() - started > maxMs) return reject(new Error('Form not found on page'));
+            setTimeout(tick, 200);
+          };
+          tick();
+        });
+      }
+
+      // Show a message box below the form
+      function addMessageBelowForm(form, text, type) {
+        form.querySelectorAll('.contact-form-message').forEach(n=>n.remove());
+        const div = document.createElement('div');
+        div.className = 'contact-form-message ' + type;
+        div.style.cssText =
+          'padding:15px;margin:20px 0;border-radius:8px;font-weight:500;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,0.1);' +
+          (type==='success'
+            ? 'background:#d4edda;color:#155724;border:1px solid #c3e6cb;'
+            : 'background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;');
+        div.textContent = text;
+        form.parentNode.insertBefore(div, form.nextSibling);
+        if (type==='success') setTimeout(()=>div.remove(), 5000);
+        div.scrollIntoView({ behavior:'smooth', block:'center' });
+      }
+
+      // MAIN
+      waitForForm().then((form) => {
+        log('Form found:', form);
+
+        // native fallback if JS is disabled
+        form.setAttribute('action', '/contact.php');
+        form.setAttribute('method', 'POST');
+        form.setAttribute('novalidate', 'novalidate');
+
+        // ensure inputs have names
+        const setIfEmpty = (el, name) => { if (el && !el.name) el.name = name; };
+        setIfEmpty(form.querySelector('input[type="text"][placeholder*="full name" i], input[placeholder="Your full name"]'), 'full_name');
+        setIfEmpty(form.querySelector('input[type="email"]'), 'email');
+        setIfEmpty(form.querySelector('input[type="text"][placeholder*="company" i], input[placeholder="Your company name"]'), 'company');
+        setIfEmpty(form.querySelector('input[type="tel"], input[placeholder*="phone" i], input[placeholder*="555" i]'), 'phone');
+        setIfEmpty(form.querySelector('select'), 'service');
+        setIfEmpty(form.querySelector('textarea'), 'message');
+
+        // hidden helpers
+        if (!form.querySelector('input[name="_subject"]')) {
+          const s = document.createElement('input'); s.type='hidden'; s.name='_subject'; s.value='New Consultation Request';
+          form.appendChild(s);
+        }
+        if (!form.querySelector('input[name="website"]')) {
+          const hp = document.createElement('input'); hp.type='text'; hp.name='website'; hp.style.display='none';
+          form.appendChild(hp);
+        }
+
+        // submit handler
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          const btn = form.querySelector('button[type="submit"],[type="submit"]');
+          const get = (n) => form.querySelector(`[name="${n}"]`)?.value?.trim() || '';
+          const payload = {
+            name: get('full_name'),
+            email: get('email'),
+            company: get('company'),
+            phone: get('phone'),
+            service: get('service'),
+            message: get('message'),
+            _subject: 'New Consultation Request',
+            _replyto: get('email')
+          };
+
+          log('Submitting payload:', payload);
+
+          if (!payload.name || !payload.email || !payload.message) {
+            addMessageBelowForm(form, 'Please complete your name, email, and message.', 'error');
+            return;
+          }
+
+          const original = btn ? btn.textContent : null;
+          if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+          try {
+            const formData = new URLSearchParams();
+            for (const [key, val] of Object.entries(payload)) formData.append(key, val);
+
+            const res = await fetch('/contact.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: formData.toString()
+            });
+
+            let bodyText = '';
+            try { bodyText = await res.text(); } catch (_) {}
+            log('Contact.php response:', res.status, res.statusText, 'Body:', bodyText);
+
+            if (res.ok) {
+              addMessageBelowForm(form, 'Thanks — I’ll get back to you within 24 hours.', 'success');
+              form.reset();
+            } else {
+              addMessageBelowForm(form, 'There was an error sending your message. Please email rob@robertkuh.com.', 'error');
+            }
+          } catch (err) {
+            log('Network error:', err);
+            addMessageBelowForm(form, 'Network error. Please email rob@robertkuh.com.', 'error');
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = original; }
+          }
+        }, { capture: true });
+
+      }).catch((err) => {
+        log('Could not find the consultation form:', err);
+      });
+    })();
+    </script>
+  </body>
+</html>
