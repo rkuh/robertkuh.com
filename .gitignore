@@ -1,0 +1,22 @@
+# SMTP Configuration (contains sensitive credentials)
+smtp-config.php
+
+# Form logs (may contain user data)
+_form_log/
+
+# Backups
+*.backup
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.log
